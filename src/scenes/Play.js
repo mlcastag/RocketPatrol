@@ -5,7 +5,15 @@ class Play extends Phaser.Scene{
 
     create(){
         this.starfield = this.add.tileSprite(0, 0, 640, 480, 'starfield').setOrigin(0,0)
-        
+        this.ludacrisSpeed = false
+        this.ambiance = this.sound.add('arthur-vyncke-a-few-jumps-away', {
+            volume: 0.2,
+            loop: true
+        })
+        this.ambiance.play()
+
+        this.bigBooms = ['sfx-explosion', 'newexplosion1', 'newexplosion2', 'newexplosion3', 'newexplosion4']
+
         this.add.rectangle(0, borderUISize + borderPadding, game.config.width, borderUISize * 2, 0x00FF00).setOrigin(0,0)
         this.add.rectangle(0, 0, game.config.width, borderUISize, 0xFFFFFF).setOrigin(0, 0)
         this.add.rectangle(0, game.config.height - borderUISize, game.config.width, borderUISize, 0xFFFFFF).setOrigin(0, 0)
@@ -37,12 +45,33 @@ class Play extends Phaser.Scene{
             },
             fixedWidth: 100
         }
+        let playerConfig = {
+          fontFamily: 'Courier',
+          fontSize: '28px',
+          backgroundColor: '#F3B141',
+          color: '#843605',
+          align: 'left',
+          padding: {
+              top: 5,
+              bottom: 5,
+            },
+            fixedWidth: 150
+        }
         this.scoreLeft = this.add.text(borderUISize + borderPadding, borderUISize + borderPadding*2, this.p1Score, scoreConfig)
-        
+        this.playerTurn = this.add.text(borderUISize + borderPadding * 37, borderUISize + borderPadding*2, 'Player: ' + game.turn, playerConfig)
+        this.timer = this.add.text(borderUISize + borderPadding * 15, borderUISize + borderPadding*2, '', {...playerConfig, fixedWidth: 35})
+        this.fireText = this.add.text(borderUISize + borderPadding * 25, borderUISize + borderPadding*2, 'FIRE!', {...playerConfig, fixedWidth: 80})
+        this.fireText.setVisible(false)
         this.gameOver = false
 
         scoreConfig.fixedWidth = 0
         this.clock = this.time.delayedCall(game.settings.gameTimer, () => {
+            if(this.p1Score > game.highScore){
+                game.highScore = this.p1Score
+            }
+            if(game.turn == 1 && game.twoPlayer == 2){
+                this.add.text(game.config.width/2, game.config.height/2 - 64, 'PRESS RESET FOR PLAYER 2', scoreConfig).setOrigin(0.5)
+            }
             this.add.text(game.config.width/2, game.config.height/2, 'GAME OVER', scoreConfig).setOrigin(0.5)
             this.add.text(game.config.width/2, game.config.height/2 + 64, 'Press (R) to Restart or <- for Menu', scoreConfig).setOrigin(0.5)
             this.gameOver = true
@@ -50,9 +79,28 @@ class Play extends Phaser.Scene{
    
     }
 
-    update(){
+    update(){ 
+        let timeLeft = Math.round(this.clock.getRemaining() / 1000)
+        
+        if(!this.gameOver){
+            this.timer.text = timeLeft
+        }
+
+        if(!this.ludacrisSpeed && timeLeft <= (game.settings.gameTimer / 1000) - 30){
+            this.ludacrisSpeed = true
+            this.ship01.moveSpeed *= 2
+            this.ship02.moveSpeed *= 2
+            this.ship03.moveSpeed *= 2
+        } 
+        
         if(this.gameOver && Phaser.Input.Keyboard.JustDown(keyRESET)){
-            this.scene.restart()
+            if(game.turn == 1 && game.twoPlayer == 2){
+                game.turn = 2
+                this.scene.restart()
+            }else if(game.turn == 2  || game.twoPlayer == 1){
+                game.turn = 1
+                this.scene.restart()
+            }
         }
 
         if (this.gameOver && Phaser.Input.Keyboard.JustDown(keyLEFT)) {
@@ -60,6 +108,12 @@ class Play extends Phaser.Scene{
         }
         
         this.starfield.tilePositionX -= 4
+
+        if(this.p1Rocket.isFiring){
+            this.fireText.setVisible(true)
+        }else{
+            this.fireText.setVisible(false)
+        }
 
         if(!this.gameOver){
             this.p1Rocket.update()
@@ -80,6 +134,11 @@ class Play extends Phaser.Scene{
             this.p1Rocket.reset()
             this.shipExplode(this.ship01)
         }
+        if(this.p1Rocket.y <= borderUISize * 3 + borderPadding){
+            this.p1Rocket.reset()
+            this.clock.elapsed += 5000
+        }
+        
     }
 
     checkCollision(rocket, ship) {
@@ -99,12 +158,13 @@ class Play extends Phaser.Scene{
         boom.anims.play('explode')
         boom.on('animationcomplete', () => {
             ship.reset()
-            ship.aplha = 1
+            ship.alpha = 1
             boom.destroy()
         })
         this.p1Score += ship.points
-        this.scoreLeft.text = this.p1Score   
-        this.sound.play('sfx-explosion')
+        this.scoreLeft.text = this.p1Score
+        this.clock.elapsed -= 5000 
+        this.sound.play(this.bigBooms[Phaser.Math.Between(0, this.bigBooms.length - 1)])
     }
 
 }
