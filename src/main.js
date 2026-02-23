@@ -1,6 +1,6 @@
 // Matt Castagna
 // Rocket Patrol 2 Electric Boogaloo
-// X Hours
+// 8.5 Hours
 // High Score (1 point), alternating 2 player mode (5), Display time remaining (3), 
 // Timer that adds and subtracts (5), Increase speed after 30 sec (1), 
 // 4 new explosion (3), 'FIRE!' text when shooting (1), Background music (1)
